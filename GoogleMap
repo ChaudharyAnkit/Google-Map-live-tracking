@@ -1,0 +1,381 @@
+<%@ Page Language="C#" AutoEventWireup="true" CodeFile="Default.aspx.cs" Inherits="_Default" %>
+
+<!DOCTYPE html>
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head runat="server">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"></script>
+    <script src="https://maps.googleapis.com/maps/api/js?signed_in=true&libraries=places&v=3.exp&key='your google api key here'"></script>
+    <title></title>
+    <script type="text/javascript">
+
+
+        var UserID, OperatorID, TECH_ID = 0;
+        var LAT, LON, LAT_OLD, LON_OLD, VEHICLE_NO, LAT_LON_DATA, COUNT;
+        var SPEED, STATE, PLACE, DISTANCE, TIME_TAKEN_TO_UPDATE, NEXT_STOP;
+        var FROM_DATE = '';
+        var TO_DATE = '';
+
+        var ZoomSize;
+        var ZoomStatus = true;
+        var RecordType = 1; // means History
+
+        //==== New
+        var map = null;
+        var progressbar;
+
+        // var line = [];
+        var num = 0;
+        var maxNum;
+        var pb;
+        var markersArray = [];
+        // var path = [];
+        var polyline;
+        var Array_LAT_LON_DATA;
+
+        var location_array = [];
+        var lable_array = [];
+
+
+
+        var drawing_speed = 500;
+
+        
+        $(document).ready(function () {
+           
+
+        });
+         
+
+        function myFunction() {
+
+            var emei = $('#txtemei').val();
+            $.ajax({
+                type: "POST",
+                url: "Default.aspx/Get_CurrentPosition",
+                data: JSON.stringify({ "RecordType": emei, "ID": emei, "strFromDate": emei, "strToDate": emei }),
+                contentType: "application/json; charset=utf-8",
+                dataType: "json",
+                success: function (data) {
+                    var response = data.d;
+                    
+
+                    if ((response == '') || (response == null)) {
+                        alert('No Record Found');
+                    }
+                    else {
+                   
+                        $('#console').val(response + '\n' + $('#console').val() + '');
+
+                        LAT_LON_DATA = response;
+
+                        Array_LAT_LON_DATA = new Array();
+                        Array_LAT_LON_DATA = LAT_LON_DATA.split('#');
+
+                       // map.setZoom(4);
+                       // alert(Array_LAT_LON_DATA[0], Array_LAT_LON_DATA[1]);
+
+                          addMarkers(Array_LAT_LON_DATA);
+                        
+
+                    }
+
+                }
+            });
+        }
+
+
+        function addMarkers() {
+
+
+            var Array_LAT_LON = new Array();
+            Array_LAT_LON = Array_LAT_LON_DATA[num].split('@');
+
+            TIME_RECORDED = Array_LAT_LON[0];
+            LAT = Array_LAT_LON[0];
+            LON = Array_LAT_LON[1];
+            STATE = Array_LAT_LON[2];
+            SPEED = Array_LAT_LON[3];
+
+            var currLatlng = new google.maps.LatLng(LAT, LON);
+            map.setCenter(currLatlng); //, 15); //=== DEFAULT ZOOM SIZE IS 16
+            //alert(currLatlng);
+
+
+
+         
+                //map.setZoom(4);
+          
+
+
+
+
+
+
+            var marker = AddMarkerProperties(num, Array_LAT_LON_DATA.length - 1, STATE, SPEED, LAT, LON, TIME_RECORDED);
+            markersArray.push(marker);
+            var path = polyline.getPath();
+            path.push(new google.maps.LatLng(LAT, LON));
+
+
+
+            
+
+
+
+            setTimeout(myFunction, 3000);
+
+
+
+
+            
+
+
+
+
+
+        }
+
+        function add_link() {
+
+           
+            var link_div = document.createElement('div');
+            link_div.className = "mainTable";
+
+            var myHtml = "<table style='background-color:wheat;border:1px solid black' width='100%'>";
+
+            myHtml += "<tr>";
+            myHtml += "<th colspan='2'> <b>STATUS</b> </th>";
+
+            myHtml += "<th> <b>ICON</b> </th>";
+            myHtml += "</tr>";
+
+            myHtml += "<tr>";
+            myHtml += "<td colspan='2'>Start</td>";
+
+            myHtml += "<td > <img src='../images/google_icons/start.png' /> </td>";
+            myHtml += "</tr>";
+
+            myHtml += "<tr>";
+            myHtml += "<td colspan='2'>End</td>";
+
+            myHtml += "<td> <img src='../images/google_icons/end.png' /> </td>";
+            myHtml += "</tr>";
+
+            myHtml += "<tr>";
+            myHtml += "<td colspan='2'>Running</td>";
+
+            myHtml += "<td> <img src='../images/google_icons/mm_20_green.png' /> </td>";
+            myHtml += "</tr>";
+
+            myHtml += "<tr>";
+            myHtml += "<td colspan='2'>Stop</td>";
+
+            myHtml += "<td> <img src='../images/google_icons/mm_20_red.png' /> </td>";
+            myHtml += "</tr>";
+
+
+
+            myHtml += "<tr>";
+            myHtml += "<td colspan='2'> <a href=\"https://github.com/ChaudharyAnkit\" target=\"_blank\"><b>Powered by Ankit chaudhary</b></a> </td>";
+            myHtml += "<td> <img src='images/Sky.ico' /> </td>";
+            myHtml += "</tr>";
+            link_div.innerHTML = myHtml; 
+
+            return link_div;
+
+        }
+        function AddMarkerProperties(pCurrentFlag, pLimit, pSTATE, pSPEED, pLAT, pLON, pTIME_RECORDED) {
+
+          
+
+
+
+
+            var iconPath = "";
+            if (pCurrentFlag == 0) {
+                iconPath = "../images/google_icons/start.png";
+            }
+            else if (pCurrentFlag == pLimit - 1) {
+                iconPath = "../images/google_icons/end.png";
+            }
+            else if (pSPEED == 0)
+                iconPath = "../images/google_icons/mm_20_red.png";
+            else
+                iconPath = "../images/google_icons/mm_20_green.png";
+
+
+
+            var serial_no = num;
+
+
+            var image = new google.maps.MarkerImage(iconPath, new google.maps.Size(20, 34), new google.maps.Point(0, 0), new google.maps.Point(10, 34))
+
+
+            var marker = new google.maps.Marker(
+                                                            {
+                                                                position: new google.maps.LatLng(pLAT, pLON),
+                                                                icon: iconPath, //image,
+                                                                map: map,
+                                                                title: "Position : " + serial_no + ", Time : " + pTIME_RECORDED,
+                                                                zIndex: 10
+                                                            }
+                                                       );
+
+      
+
+
+            return marker;
+
+        }
+        window.onload = initialize;
+        function initialize() {
+
+
+            var myOptions =
+            {
+
+
+                zoom: 18,
+                center: new google.maps.LatLng(28.6667, 77.2167),
+                mapTypeId: google.maps.MapTypeId.ROADMAP
+
+                
+                //, all commented section below for night map
+
+           //     styles: [
+           //{elementType: 'geometry', stylers: [{color: '#242f3e'}]},
+           //{elementType: 'labels.text.stroke', stylers: [{color: '#242f3e'}]},
+           //{elementType: 'labels.text.fill', stylers: [{color: '#746855'}]},
+           //{
+           //    featureType: 'administrative.locality',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#d59563'}]
+           //},
+           //{
+           //    featureType: 'poi',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#d59563'}]
+           //},
+           //{
+           //    featureType: 'poi.park',
+           //    elementType: 'geometry',
+           //    stylers: [{color: '#263c3f'}]
+           //},
+           //{
+           //    featureType: 'poi.park',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#6b9a76'}]
+           //},
+           //{
+           //    featureType: 'road',
+           //    elementType: 'geometry',
+           //    stylers: [{color: '#38414e'}]
+           //},
+           //{
+           //    featureType: 'road',
+           //    elementType: 'geometry.stroke',
+           //    stylers: [{color: '#212a37'}]
+           //},
+           //{
+           //    featureType: 'road',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#9ca5b3'}]
+           //},
+           //{
+           //    featureType: 'road.highway',
+           //    elementType: 'geometry',
+           //    stylers: [{color: '#746855'}]
+           //},
+           //{
+           //    featureType: 'road.highway',
+           //    elementType: 'geometry.stroke',
+           //    stylers: [{color: '#1f2835'}]
+           //},
+           //{
+           //    featureType: 'road.highway',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#f3d19c'}]
+           //},
+           //{
+           //    featureType: 'transit',
+           //    elementType: 'geometry',
+           //    stylers: [{color: '#2f3948'}]
+           //},
+           //{
+           //    featureType: 'transit.station',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#d59563'}]
+           //},
+           //{
+           //    featureType: 'water',
+           //    elementType: 'geometry',
+           //    stylers: [{color: '#17263c'}]
+           //},
+           //{
+           //    featureType: 'water',
+           //    elementType: 'labels.text.fill',
+           //    stylers: [{color: '#515c6d'}]
+           //},
+           //{
+           //    featureType: 'water',
+           //    elementType: 'labels.text.stroke',
+           //    stylers: [{color: '#17263c'}]
+           //}
+           //     ]
+          
+
+
+            }
+
+            directionsDisplay = new google.maps.DirectionsRenderer();
+            map = new google.maps.Map(document.getElementById("map_canvas"), myOptions);
+
+            var lineSymbol = {
+
+                path: google.maps.SymbolPath.FORWARD_CLOSED_ARROW
+                // path: 'M 0,-1 0,1',
+                // strokeOpacity: 1,
+                // scale: 4
+            };
+
+
+            var polyOptions = {
+                strokeColor: '#FF0000',
+                strokeOpacity: 1,
+                strokeWeight: 2,
+                //geodesic: true,
+                icons: [{
+                    icon: lineSymbol,
+                    offset: '0',
+                    repeat: '20px'
+                }]
+            }
+
+            polyline = new google.maps.Polyline(polyOptions);
+            polyline.setMap(map);
+
+            //setTimeout(myFunction, 3000);
+            map.controls[google.maps.ControlPosition.RIGHT].push(add_link());
+           
+        }
+    </script>
+
+</head>
+<body>
+    <form id="form1" runat="server">
+    <div style="">
+        <input  type="text" id="txtemei" /> 
+        <input type="button" onclick="myFunction();"  value="Get Data"/> 
+    </div>
+
+         <div >
+       
+     <textarea rows="30" style="background-color:black;color:white"  cols="100" id="console"></textarea>
+    </div>
+        <div id="map_canvas" runat="server" style="width: 100%; height: 500px; border: none;">
+
+    </div>
+    </form>
+</body>
+</html>
